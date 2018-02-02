@@ -99,23 +99,36 @@ class Document(BaseObject):
     def add_recipient(self, recipient):
         return self._add(recipient)
 
-    def add_file(self, _file):
-        return self._add(_file)
+    def add_file(self, _file, index=None):
+        if index is not None:
+            self._fields.insert(index, [])
+        else:
+            self._fields.append([])
+        return self._add(_file, index)
 
     def add_signer(self, signer):
         if not signer.id:
             signer.id = len(self.signers) + 1
         return self._add(signer)
 
-    def add_field(self, field):
-        return self.add_field_list([field])
+    def add_field(self, field, file_index=None):
+        return self.add_field_list([field], file_index)
 
-    def add_field_list(self, field_list):
+    def add_field_list(self, field_list, file_index=None):
         for field in field_list:
             field.validate()
-        self._fields.append(field_list)
 
-    def _add(self, item):
+        if file_index is not None:
+            if file_index >= len(self._fields) or file_index < 0:
+                raise Exception('file_index is out of range.')
+
+        else:
+            file_index = len(self._fields) - 1
+
+        for field in field_list:
+            self._fields[file_index].append(field)
+
+    def _add(self, item, index=None):
         mapping = {
             Recipient: '_recipients',
             File: '_files',
@@ -126,7 +139,11 @@ class Document(BaseObject):
         if mapping[type(item)]:
             item.validate()
             lst = getattr(self, mapping[type(item)], item)
-            lst.append(item)
+
+            if index is not None:
+                lst.insert(index, item)
+            else:
+                lst.append(item)
 
     def validate(self):
         self._model.validate()
